@@ -40,8 +40,8 @@ class Policy(nn.Module):
     def forward(self, inputs, rnn_hxs, masks):
         raise NotImplementedError
 
-    def act(self, inputs, rnn_hxs, masks, deterministic=False):
-        value, actor_features, rnn_hxs = self.base(inputs, rnn_hxs, masks)
+    def act(self, inputs, rnn_hxs, masks, instruction=None, deterministic=False):
+        value, actor_features, rnn_hxs = self.base(inputs, rnn_hxs, masks, instruction)
         dist = self.dist(actor_features)
 
         if deterministic:
@@ -152,7 +152,7 @@ class NNBase(nn.Module):
 
 
 class CNNBase(NNBase):
-    def __init__(self, num_inputs, hidden_size=256):
+    def __init__(self, num_inputs, hidden_size=256, vocab_size=10, embed_dim):
         super(CNNBase, self).__init__(hidden_size, hidden_size)
 
         init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.
@@ -168,10 +168,19 @@ class CNNBase(NNBase):
 
         self.critic_linear = init_(nn.Linear(hidden_size, 1))
 
+        self.embedding = nn.Embedding(vocab_size, embed_dim)
+        self.lstm = nn.LSTM(embed_dim, 64, num_layers=1, batch_first=True)
+
         self.train()
 
-    def forward(self, inputs, rnn_hxs, masks):
+    def forward(self, inputs, rnn_hxs, masks, instruction):
         x = self.main(inputs/255.0)
+
+        embedded_inst = self.embedding(instruction)
+        out, hn = self.lstm(embedded_inst)
+        h, c = hn
+
+        x = torch.concat([x, h], dim=1)
 
         x, rnn_hxs = self._forward_gru(x, rnn_hxs, masks)
 

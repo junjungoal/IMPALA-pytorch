@@ -46,11 +46,12 @@ class Actor(object):
         """
         """
         print('Build Environment for {}'.format(self.actor_name))
-        self.env = deepmind_lab.Lab(self.level, ['RGB_INTERLEAVED'], config=CONFIG)
+        self.env = deepmind_lab.Lab(self.level, ['RGB_INTERLEAVED', 'INSTR'], config=CONFIG) # INSTR: instruction
         torch.manual_seed(self.args.seed)
         #writer = SummaryWriter(log_dir=self.args.result_dir)
 
         self.env.reset()
+        print(self.env.observations())
         obs = self.env.observations()['RGB_INTERLEAVED'].transpose((2, 0, 1))
         done = True
         total_reward = 0.

@@ -17,15 +17,9 @@ from agents.learner import Learner
 from agents.actor import Actor
 from misc.q_manager import QManager
 from misc.storage import RolloutStorage
+from levels import LEVELS
 
 
-LEVELS = [
-        'tests/rooms_watermaze'
-        'tests/rooms_keys_doors_puzzle',
-        'tests/lasertag_three_opponents_small',
-        'tests/explore_goal_locations_small',
-        'tests/seekavoid_arena_01'
-        ]
 
 CONFIG = {'width': '96', 'height': '72'}
 
@@ -59,6 +53,7 @@ if __name__ == '__main__':
     parser.add_argument('--value_loss_coef', type=float, default=0.5)
     parser.add_argument('--max_grad_norm', type=float, default=40)
     parser.add_argument('--save_interval', type=int, default=100)
+    parser.add_argument('--is_instruction', type=str2bool, default=True)
     args = parser.parse_args()
 
     args.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
