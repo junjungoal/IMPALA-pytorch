@@ -20,7 +20,11 @@ from misc.storage import RolloutStorage
 
 
 LEVELS = [
-        'tests/empty_room_test'
+        'tests/rooms_watermaze'
+        'tests/rooms_keys_doors_puzzle',
+        'tests/lasertag_three_opponents_small',
+        'tests/explore_goal_locations_small',
+        'tests/seekavoid_arena_01'
         ]
 
 CONFIG = {'width': '96', 'height': '72'}
