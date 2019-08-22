@@ -27,9 +27,9 @@ CONFIG = {'width': '96', 'height': '72'}
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--width', type=int, default=80,
+    parser.add_argument('--width', type=int, default=96,
                       help='Horizontal size of the observations')
-    parser.add_argument('--height', type=int, default=80,
+    parser.add_argument('--height', type=int, default=72,
                       help='Vertical size of the observations')
     parser.add_argument('--level_script', type=str,
                       default='tests/empty_room_test',
@@ -40,12 +40,21 @@ if __name__ == '__main__':
                       help='Learning rate')
     parser.add_argument('--num_actors', type=int, default=1,
                       help='Number of Actors')
-    parser.add_argument('--num_steps', type=int, default=20,
+    parser.add_argument('--num_steps', type=int, default=200,
+                      help='Number of Steps to learn')
+    parser.add_argument('--total_num_steps', type=int, default=4096,
                       help='Number of Steps to learn')
     parser.add_argument('--seed', type=int, default=2019,
                       help='Random seed')
     parser.add_argument('--coef_hat', type=float, default=1.0)
     parser.add_argument('--rho_hat', type=float, default=1.0)
+    parser.add_argument('--batch_size', type=int, default=32)
+    parser.add_argument('--gamma', type=float, default=0.99,
+                      help='discount rate')
+    parser.add_argument('--entropy_coef', type=float, default=0.0033)
+    parser.add_argument('--value_loss_coef', type=float, default=0.5)
+    parser.add_argument('--max_grad_norm', type=float, default=40)
+    parser.add_argument('--save_interval', type=int, default=100)
     args = parser.parse_args()
 
     args.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -113,12 +122,12 @@ if __name__ == '__main__':
 
     print('Run processes')
 
-    #for rank, a in enumerate(actors):
-    #    p = mp.Process(target=a.performing, args=(rank,))
-    #    p.start()
-    #    processes.append(p)
+    for rank, a in enumerate(actors):
+        p = mp.Process(target=a.performing, args=(rank,))
+        p.start()
+        processes.append(p)
 
-    #learner.learning()
+    learner.learning()
 
-    #for p in processes:
-   #     p.join()
+    for p in processes:
+        p.join()

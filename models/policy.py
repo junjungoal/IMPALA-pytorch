@@ -50,9 +50,9 @@ class Policy(nn.Module):
             action = dist.sample()
 
         action_log_probs = dist.log_probs(action)
-        dist_entropy = dist.entropy().mean()
+        dist_entropy = dist.entropy()
 
-        return value, action, action_log_probs, rnn_hxs
+        return value, action, action_log_probs, rnn_hxs, dist.probs, dist_entropy
 
     def get_value(self, inputs, rnn_hxs, masks):
         value, _, _ = self.base(inputs, rnn_hxs, masks)
@@ -161,7 +161,7 @@ class CNNBase(NNBase):
         self.main = nn.Sequential(
             init_(nn.Conv2d(num_inputs, 16, 8, stride=4)), nn.ReLU(),
             init_(nn.Conv2d(16, 32, 4, stride=2)), nn.ReLU(), Flatten(),
-            init_(nn.Linear(32 * 8 * 6, hidden_size)), nn.ReLU())
+            init_(nn.Linear(32 * 7 * 10, hidden_size)), nn.ReLU())
 
         init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.
                                constant_(x, 0))

@@ -45,20 +45,20 @@ class Actor(object):
     def performing(self, rank):
         """
         """
+        print('Build Environment for {}'.format(self.actor_name))
         self.env = deepmind_lab.Lab(self.level, ['RGB_INTERLEAVED'], config=CONFIG)
         torch.manual_seed(self.args.seed)
         #writer = SummaryWriter(log_dir=self.args.result_dir)
 
-
         self.env.reset()
         obs = self.env.observations()['RGB_INTERLEAVED'].transpose((2, 0, 1))
-
         done = True
         total_reward = 0.
         total_episode_length = 0
         num_episodes = 0
 
         iterations = 0
+        timesteps = 0
 
 
 
@@ -76,32 +76,31 @@ class Actor(object):
 
 
             for step in range(self.args.num_steps):
-                value, action, action_log_prob, recurrent_hidden_states = self.actor_critic.act(
+                value, action, action_log_prob, recurrent_hidden_states, logits, _ = self.actor_critic.act(
                         self.rollouts.obs[step], self.rollouts.recurrent_hidden_states[step],
                         self.rollouts.masks[step])
-                obs, reward, done, info = self.env.step(int(action.cpu()[0][0]))
-                obs = torch.from_numpy(obs.transpose((2, 0, 1)))
+                reward = self.env.step(ACTION_LIST[0], num_steps=1)
+                obs = torch.from_numpy(self.env.observations()['RGB_INTERLEAVED'].transpose((2, 0, 1)))
 
                 total_reward += reward
 
                 masks = torch.FloatTensor([[0.0] if done else [1.0]])
-                bad_masks = torch.FloatTensor([[0.0] if 'bad_transition' in info.keys() else [1.0]])
+                action_onehot = torch.zeros(self.actor_critic.n_actions)
+                action_onehot[action] = 1.
 
                 self.rollouts.insert(obs, recurrent_hidden_states, action,
-                        action_log_prob, value, torch.from_numpy(np.array([[reward]])), masks, bad_masks)
+                        action_log_prob, value, torch.from_numpy(np.array([[reward]])), masks, logits, action_onehot)
 
+                timesteps += 1
                 if done:
                     num_episodes += 1
                     total_episode_length += 1
-                    break
-
             self.q_trace.put((self.rollouts.obs[:, 0].detach().to("cpu"), self.rollouts.actions[:, 0].detach().to("cpu"), self.rollouts.rewards[:, 0].detach().to("cpu"),\
-                    self.rollouts.action_log_probs[:, 0].detach().to("cpu"), self.rollouts.masks[:, 0].detach().to('cpu')))
+                    self.rollouts.action_log_probs[:, 0].detach().to("cpu"), self.rollouts.masks[:, 0].detach().to('cpu'), self.rollouts.logits[:, 0].detach().to('cpu'), self.rollouts.action_onehot[:, 0].detach().to('cpu')))
             if done:
-                frame = self.env.reset()
-                obs = torch.zeros((1, 4, 84, 84))
-                obs[:, -1] = torch.from_numpy(frame)
-                if num_episodes == self.args.max_episode_length:
+                self.env.reset()
+                obs = self.env.observations()['RGB_INTERLEAVED'].transpose((2, 0, 1))
+                if timesteps >= self.args.total_num_steps:
                     print(self.actor_name, ': total_rewards: {}'.format(total_reward/num_episodes))
                     #writer.add_scalar(self.actor_name + '_total_reward', total_reward/num_episodes, iterations)
                     iterations += 1
