@@ -35,9 +35,9 @@ if __name__ == '__main__':
                       help='The environment level script to load')
     parser.add_argument('--experiment_id', type=int, required=True,
                       help='Experiment ID')
-    parser.add_argument('--lr', type=float, default=0.00001,
+    parser.add_argument('--lr', type=float, default=0.00048,
                       help='Learning rate')
-    parser.add_argument('--num_steps', type=int, default=200,
+    parser.add_argument('--num_steps', type=int, default=100,
                       help='Number of Steps to learn')
     parser.add_argument('--total_num_steps', type=int, default=4096,
                       help='Number of Steps to learn')
@@ -48,7 +48,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--gamma', type=float, default=0.99,
                       help='discount rate')
-    parser.add_argument('--entropy_coef', type=float, default=0.0033)
+    parser.add_argument('--entropy_coef', type=float, default=0.00025)
     parser.add_argument('--value_loss_coef', type=float, default=0.5)
     parser.add_argument('--max_grad_norm', type=float, default=40)
     parser.add_argument('--save_interval', type=int, default=100)

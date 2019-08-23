@@ -63,9 +63,8 @@ class Policy(nn.Module):
         dist = self.dist(actor_features)
 
         action_log_probs = dist.log_probs(action)
-        dist_entropy = dist.entropy().mean()
 
-        return value, action_log_probs, dist_entropy, rnn_hxs
+        return value, action_log_probs, dist.logits, rnn_hxs
 
     def get_features(self, inputs, rnn_hxs, masks):
         _, actor_features, _ = self.base(inputs, rnn_hxs, masks)

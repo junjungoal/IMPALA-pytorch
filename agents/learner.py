@@ -5,7 +5,9 @@ import torch
 import time
 import numpy as np
 import torch.multiprocessing as mp
+import torch.nn.functional as F
 from torch.optim import RMSprop
+from torch.utils.tensorboard import SummaryWriter
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -15,10 +17,11 @@ class Learner(object):
         self.args = args
         self.q_batch = q_batch
         self.actor_critic = actor_critic
-        self.argsimizer = RMSprop(self.actor_critic.parameters(), lr=args.lr)
+        self.optimizer = RMSprop(self.actor_critic.parameters(), lr=args.lr)
         self.actor_critic.share_memory()
 
     def learning(self):
+        writer = SummaryWriter(log_dir=self.args.result_dir)
         torch.manual_seed(self.args.seed)
         coef_hat = torch.Tensor([[self.args.coef_hat]]).to(device)
         rho_hat = torch.Tensor([[self.args.rho_hat]]).to(device)
@@ -39,7 +42,7 @@ class Learner(object):
                     values.append(value)
                     break
 
-                value, action_log_prob, dist_entropy, recurrent_hidden_states =  self.actor_critic.evaluate_actions(obs[:, step], recurrent_hidden_states, masks[:, step], actions[:, step])
+                value, action_log_prob, logits, recurrent_hidden_states =  self.actor_critic.evaluate_actions(obs[:, step], recurrent_hidden_states, masks[:, step], actions[:, step])
                 values.append(value)
 
                 #logit_a = action_onehot[:, step] * logits.detach() + (1-action_onehot[:, step]) * (1-logits.detach())
@@ -54,32 +57,42 @@ class Learner(object):
                 is_rate = torch.exp(action_log_prob.detach() - log_probs[:, step])
                 coef.append(torch.min(coef_hat, is_rate))
                 rho.append(torch.min(rho_hat, is_rate))
-                entropies.append(dist_entropy)
+                policy = F.softmax(logits, dim=1)
+                log_policy = F.log_softmax(logits, dim=1)
+                entropy = torch.sum(-policy*log_policy)
+                entropies.append(entropy)
+
                 log_prob.append(action_log_prob)
 
             policy_loss = 0
-            value_loss = 0
+            baseline_loss = 0
+            entropy_loss = 0
+            vs = 0
+
             for rev_step in reversed(range(obs.size(1)-1)):
                 # r + args * v(s+1) - V(s)
-                fix_vp = rewards[:, rev_step] + self.args.gamma * (values[rev_step+1]+value_loss) - values[rev_step]
-
-                delta_v = rho[rev_step] * (rewards[:, rev_step] + self.args.gamma * values[rev_step+1] - values[rev_step])
+                #fix_vp = rewards[:, rev_step] + self.args.gamma * (values[rev_step+1]+value_loss) - values[rev_step]
+                advantages = rho[rev_step] * (rewards[:, rev_step] + self.args.gamma * values[rev_step+1] - values[rev_step])
                 # value_loss = v_{s} - V(x_{s})
-                value_loss = self.args.gamma * coef[rev_step] * value_loss + delta_v
+                vs = self.args.gamma * coef[rev_step] * vs + advantages
 
-                policy_loss = policy_loss \
-                                - rho[rev_step]*log_prob[rev_step]*fix_vp.detach() \
-                                - self.args.entropy_coef * entropies[rev_step]
+                policy_loss += log_prob[rev_step]*advantages.detach()
 
-            self.argsimizer.zero_grad()
+
+            vs = vs.sum() + torch.sum(torch.stack(values))
+            vs = vs.detach()
+            baseline_loss = vs - torch.sum(torch.stack(values))
+            entropy_loss = self.args.entropy_coef*torch.sum(torch.stack(entropies))
             policy_loss = policy_loss.sum()
-            value_loss = value_loss.sum()
-            loss = policy_loss + self.args.value_loss_coef * value_loss
+            loss = policy_loss + self.args.value_loss_coef * baseline_loss - entropy_loss
+
+            self.optimizer.zero_grad()
             loss.backward()
 
             torch.nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.args.max_grad_norm)
-            #print("v_loss {:.3f} p_loss {:.3f}".format(value_loss.item(), policy_loss.item()))
-            self.argsimizer.step()
+            print("v_loss {:.3f} p_loss {:.3f} entropy_loss {:.5f} loss {:.3f}".format(baseline_loss.item(), policy_loss.item(), entropy_loss.item(), loss.item()))
+            self.optimizer.step()
+            writer.add_scalar('total_loss', float(loss.item()), i)
 
 
             if (i % self.args.save_interval == 0):
