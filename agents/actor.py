@@ -7,7 +7,7 @@ import torch
 import deepmind_lab
 import torch.multiprocessing as mp
 from collections import deque
-#from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -48,11 +48,12 @@ class Actor(object):
         print('Build Environment for {}'.format(self.actor_name))
         self.env = deepmind_lab.Lab(self.level, ['RGB_INTERLEAVED', 'INSTR'], config=CONFIG) # INSTR: instruction
         torch.manual_seed(self.args.seed)
-        #writer = SummaryWriter(log_dir=self.args.result_dir)
+        writer = SummaryWriter(log_dir=self.args.result_dir)
 
         self.env.reset()
-        print(self.env.observations())
-        obs = self.env.observations()['RGB_INTERLEAVED'].transpose((2, 0, 1))
+        state = self.env.observations()
+        obs = state['RGB_INTERLEAVED'].transpose((2, 0, 1))
+        instr = state['INSTR']
         done = True
         total_reward = 0.
         total_episode_length = 0
@@ -81,7 +82,9 @@ class Actor(object):
                         self.rollouts.obs[step], self.rollouts.recurrent_hidden_states[step],
                         self.rollouts.masks[step])
                 reward = self.env.step(ACTION_LIST[0], num_steps=1)
-                obs = torch.from_numpy(self.env.observations()['RGB_INTERLEAVED'].transpose((2, 0, 1)))
+                state = self.env.observations()
+                obs = torch.from_numpy(state['RGB_INTERLEAVED'].transpose((2, 0, 1)))
+                instr = state['INSTR']
 
                 total_reward += reward
 
@@ -103,7 +106,9 @@ class Actor(object):
                 obs = self.env.observations()['RGB_INTERLEAVED'].transpose((2, 0, 1))
                 if timesteps >= self.args.total_num_steps:
                     print(self.actor_name, ': total_rewards: {}'.format(total_reward/num_episodes))
-                    #writer.add_scalar(self.actor_name + '_total_reward', total_reward/num_episodes, iterations)
+                    writer.add_scalar(self.actor_name + '_total_reward', total_reward/num_episodes, iterations)
                     iterations += 1
                     total_reward = 0
                     num_episodes = 0
+                    timesteps = 0
+

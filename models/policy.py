@@ -152,7 +152,7 @@ class NNBase(nn.Module):
 
 
 class CNNBase(NNBase):
-    def __init__(self, num_inputs, hidden_size=256, vocab_size=10, embed_dim):
+    def __init__(self, num_inputs, hidden_size=256, vocab_size=10, embed_dim=64):
         super(CNNBase, self).__init__(hidden_size, hidden_size)
 
         init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.
@@ -173,14 +173,15 @@ class CNNBase(NNBase):
 
         self.train()
 
-    def forward(self, inputs, rnn_hxs, masks, instruction):
+    def forward(self, inputs, rnn_hxs, masks, instruction=None):
         x = self.main(inputs/255.0)
 
-        embedded_inst = self.embedding(instruction)
-        out, hn = self.lstm(embedded_inst)
-        h, c = hn
+        if instruction is not None:
+            embedded_inst = self.embedding(instruction)
+            out, hn = self.lstm(embedded_inst)
+            h, c = hn
 
-        x = torch.concat([x, h], dim=1)
+            x = torch.concat([x, h], dim=1)
 
         x, rnn_hxs = self._forward_gru(x, rnn_hxs, masks)
 

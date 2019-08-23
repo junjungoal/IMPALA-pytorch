@@ -18,6 +18,7 @@ from agents.actor import Actor
 from misc.q_manager import QManager
 from misc.storage import RolloutStorage
 from levels import LEVELS
+from utils import str2bool
 
 
 
@@ -36,8 +37,6 @@ if __name__ == '__main__':
                       help='Experiment ID')
     parser.add_argument('--lr', type=float, default=0.00001,
                       help='Learning rate')
-    parser.add_argument('--num_actors', type=int, default=1,
-                      help='Number of Actors')
     parser.add_argument('--num_steps', type=int, default=200,
                       help='Number of Steps to learn')
     parser.add_argument('--total_num_steps', type=int, default=4096,
@@ -53,7 +52,7 @@ if __name__ == '__main__':
     parser.add_argument('--value_loss_coef', type=float, default=0.5)
     parser.add_argument('--max_grad_norm', type=float, default=40)
     parser.add_argument('--save_interval', type=int, default=100)
-    parser.add_argument('--is_instruction', type=str2bool, default=True)
+    parser.add_argument('--is_instruction', type=str2bool, default=False)
     args = parser.parse_args()
 
     args.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -103,7 +102,7 @@ if __name__ == '__main__':
     learner = Learner(args, q_batch, actor_critic)
 
 
-    for i in range(args.num_actors):
+    for i in range(len(LEVELS)):
         print('Build Actor {:d}'.format(i))
         rollouts = RolloutStorage(args.num_steps,
                                   1,
