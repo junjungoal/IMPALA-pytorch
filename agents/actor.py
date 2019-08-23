@@ -88,11 +88,14 @@ class Actor(object):
 
                 total_reward += reward
 
-                squeezed = np.tanh(reward/5.0)
-                if reward<0:
-                    reward = squeezed*0.3
+                if self.args.reward_clipping == 'abs_one':
+                    reward = np.clip(reward, -1, 1)
                 else:
-                    reward = squeezed * 5.0
+                    squeezed = np.tanh(reward/5.0)
+                    if reward<0:
+                        reward = squeezed*0.3
+                    else:
+                        reward = squeezed * 5.0
 
                 masks = torch.FloatTensor([[0.0] if done else [1.0]])
                 action_onehot = torch.zeros(self.actor_critic.n_actions)

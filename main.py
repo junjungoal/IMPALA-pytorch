@@ -53,6 +53,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_grad_norm', type=float, default=40)
     parser.add_argument('--save_interval', type=int, default=100)
     parser.add_argument('--is_instruction', type=str2bool, default=False)
+    parser.add_argument('--reward_clipping', type=str, default='abs_one', choices=['abs_one', 'soft_asymmetric'])
     args = parser.parse_args()
 
     args.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
