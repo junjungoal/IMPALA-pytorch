@@ -67,7 +67,7 @@ class Learner(object):
             policy_loss = 0
             baseline_loss = 0
             entropy_loss = 0
-            vs = torch.zeros((obs.size(1)-1, obs.size(0))).to(device)
+            vs = torch.zeros((obs.size(1)-1, obs.size(0), 1)).to(device)
 
             """
             vs: v-trace target
@@ -78,12 +78,10 @@ class Learner(object):
                 delta_s = rho[rev_step] * (rewards[:, rev_step] + self.args.gamma * values[rev_step+1]-values[rev_step])
                 # value_loss = v_{s} - V(x_{s})
                 advantages = rho[rev_step] * (rewards[:, rev_step] + self.args.gamma * vs[rev_step] - values[rev_step])
-
                 vs[rev_step-1] = values[rev_step] + delta_s + self.args.gamma * coef[rev_step] * (vs[rev_step]-values[rev_step+1])
 
                 policy_loss += log_prob[rev_step]*advantages.detach()
-
-            baseline_loss = torch.sum(0.5*(vs.detach() - torch.stack(values))**2)
+            baseline_loss = torch.sum(0.5*(vs.detach() - torch.stack(values[:-1]))**2)
             entropy_loss = self.args.entropy_coef*torch.sum(torch.stack(entropies))
             policy_loss = policy_loss.sum()
             loss = policy_loss + self.args.value_loss_coef * baseline_loss - entropy_loss
