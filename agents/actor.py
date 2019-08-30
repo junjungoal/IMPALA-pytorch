@@ -81,7 +81,6 @@ class Actor(object):
                 value, action, action_log_prob, recurrent_hidden_states, logits, _ = self.actor_critic.act(
                         self.rollouts.obs[step], self.rollouts.recurrent_hidden_states[step],
                         self.rollouts.masks[step])
-                print(ACTION_LIST[int(action.item())])
                 reward = self.env.step(ACTION_LIST[int(action.item())], num_steps=4)
                 state = self.env.observations()
                 obs = torch.from_numpy(state['RGB_INTERLEAVED'].transpose((2, 0, 1)))
