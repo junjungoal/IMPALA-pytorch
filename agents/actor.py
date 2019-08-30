@@ -81,7 +81,8 @@ class Actor(object):
                 value, action, action_log_prob, recurrent_hidden_states, logits, _ = self.actor_critic.act(
                         self.rollouts.obs[step], self.rollouts.recurrent_hidden_states[step],
                         self.rollouts.masks[step])
-                reward = self.env.step(ACTION_LIST[0], num_steps=4)
+                print(ACTION_LIST[int(action.item())])
+                reward = self.env.step(ACTION_LIST[int(action.item())], num_steps=4)
                 state = self.env.observations()
                 obs = torch.from_numpy(state['RGB_INTERLEAVED'].transpose((2, 0, 1)))
                 instr = state['INSTR']
@@ -114,7 +115,6 @@ class Actor(object):
                 self.env.reset()
                 obs = self.env.observations()['RGB_INTERLEAVED'].transpose((2, 0, 1))
                 if timesteps >= self.args.total_num_steps:
-                    print(self.actor_name, ': total_rewards: {}'.format(total_reward/num_episodes))
                     writer.add_scalar(self.actor_name + '_total_reward', total_reward/num_episodes, iterations)
                     iterations += 1
                     total_reward = 0
